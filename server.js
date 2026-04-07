@@ -8,8 +8,11 @@ const app = express();
 
 // 🟢 ALLOW CROSS-ORIGIN REQUESTS
 app.use(cors({
-    origin: 'http://localhost:3000', // Your React App URL
-    credentials: true
+origin: [
+'http://localhost:3000',
+'https://thefolio-frontend.vercel.app',
+],
+credentials: true
 }));
 
 app.use(express.json());
