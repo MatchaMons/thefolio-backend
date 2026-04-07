@@ -129,38 +129,35 @@ router.delete('/:id', protect, async (req, res) => {
 
 // @route   POST /api/posts/:id/react
 router.post('/:id/react', protect, async (req, res) => {
-  const postId = req.params.id;
-  const userId = req.user.id;
-  const { type } = req.body;
+    try {
+        const postId = req.params.id;
+        const userId = req.user.id;
 
-  try {
-    const existing = await pool.query(
-      'SELECT * FROM post_reactions WHERE post_id = $1 AND user_id = $2',
-      [postId, userId]
-    );
-
-    if (existing.rows.length > 0) {
-      if (existing.rows[0].reaction_type === type) {
-        await pool.query('DELETE FROM post_reactions WHERE id = $1', [existing.rows[0].id]);
-        return res.json({ message: 'Reaction removed', type: null });
-      } else {
-        await pool.query(
-          'UPDATE post_reactions SET reaction_type = $1 WHERE id = $2',
-          [type, existing.rows[0].id]
+        // Check if reaction exists
+        const existing = await pool.query(
+            'SELECT * FROM reactions WHERE user_id = $1 AND post_id = $2',
+            [userId, postId]
         );
-        return res.json({ message: 'Reaction updated', type });
-      }
-    }
 
-    await pool.query(
-      'INSERT INTO post_reactions (post_id, user_id, reaction_type) VALUES ($1, $2, $3)',
-      [postId, userId, type]
-    );
-    res.status(201).json({ message: 'Reaction added', type });
-  } catch (err) {
-    console.error("REACTION ERROR:", err);
-    res.status(500).json({ message: 'Server Error' });
-  }
+        if (existing.rows.length > 0) {
+            // Remove it (Unlike)
+            await pool.query('DELETE FROM reactions WHERE id = $1', [existing.rows[0].id]);
+        } else {
+            // Add it (Like)
+            await pool.query('INSERT INTO reactions (user_id, post_id) VALUES ($1, $2)', [userId, postId]);
+        }
+
+        // Get updated count
+        const countRes = await pool.query('SELECT COUNT(*) FROM reactions WHERE post_id = $1', [postId]);
+        
+        res.json({ 
+            reactionCount: parseInt(countRes.rows[0].count),
+            userReaction: existing.rows.length === 0 // true if we just added it
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Reaction system offline." });
+    }
 });
 
 module.exports = router;
