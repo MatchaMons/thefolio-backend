@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
       SELECT 
         posts.*, 
         users.name AS author_name,
-        (SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id) AS reaction_count
+        (SELECT COUNT(*) FROM reactions WHERE post_id = posts.id) AS reaction_count -- 🟢 CHANGED TO 'reactions'
       FROM posts 
       LEFT JOIN users ON posts.author_id = users.id 
       ORDER BY posts.created_at DESC
@@ -37,24 +37,25 @@ router.get('/', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("FETCH ERROR:", err);
-    // This message helps you see if it's a DB issue in the browser console
-    res.status(500).json({ message: 'Database Error: Check if post_reactions table exists' });
+    res.status(500).json({ message: 'Database Error' });
   }
 });
 
 // @route   GET /api/posts/:id
-router.get('/:id', async (req, res) => {
+router.get('/:id', protect, async (req, res) => { 
+  // Now req.user.id will exist!
+  const userId = req.user.id; 
   try {
     const result = await pool.query(`
       SELECT 
         posts.*, 
         users.name AS author_name,
-        (SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id) AS reaction_count
+        (SELECT COUNT(*) FROM reactions WHERE post_id = posts.id) AS reaction_count,
+        EXISTS(SELECT 1 FROM reactions WHERE post_id = posts.id AND user_id = $2) AS user_reaction 
       FROM posts 
-      -- CHANGE 'INNER' TO 'LEFT' HERE --
       LEFT JOIN users ON posts.author_id = users.id 
       WHERE posts.id = $1
-    `, [req.params.id]);
+    `, [req.params.id, userId]);
 
     if (result.rows.length === 0) return res.status(404).json({ message: 'Post not found' });
     res.json(result.rows[0]);
