@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
 const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
 const commentRoutes = require('./routes/comment.routes');
+const fs = require('fs');
+require('dotenv').config();
+
 
 const app = express();
 
@@ -16,6 +18,12 @@ origin: [
 ],
 credentials: true
 }));
+
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+    console.log("📁 Uploads directory created.");
+}
 
 app.use(express.json());
 
