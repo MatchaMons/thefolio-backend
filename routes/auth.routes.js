@@ -5,6 +5,47 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { protect } = require('../middleware/auth.middleware');
 const upload = require('../middleware/upload');
+router.post('/register', async (req, res) => {
+    const { name, email, password, gamer_tag, dob, interest_level } = req.body;
+
+    try {
+        // 1. Check if user already exists
+        const userExists = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+        if (userExists.rows.length > 0) {
+            return res.status(400).json({ message: 'OPERATOR ALREADY REGISTERED' });
+        }
+
+        // 2. Hash the password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // 3. Insert into Supabase
+        // Ensure these column names (gamer_tag, dob, interest_level) exist in your Supabase 'users' table!
+        const result = await pool.query(
+            `INSERT INTO users (name, email, password, gamer_tag, dob, interest_level) 
+             VALUES ($1, $2, $3, $4, $5, $6) 
+             RETURNING id, name, email`,
+            [name, email.toLowerCase().trim(), hashedPassword, gamer_tag, dob, interest_level]
+        );
+
+        const newUser = result.rows[0];
+
+        // 4. Create Token
+        const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+        res.status(201).json({
+            token,
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            message: 'REGISTRATION SUCCESSFUL: WELCOME TO THE GUILD!'
+        });
+
+    } catch (err) {
+        console.error("REGISTRATION ERROR:", err.message);
+        res.status(500).json({ message: 'SYSTEM ERROR: QUEST FAILED' });
+    }
+});
 
 // 🟢 LOGIN
 router.post('/login', async (req, res) => {
