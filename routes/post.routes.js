@@ -31,13 +31,14 @@ router.get('/', async (req, res) => {
         users.name AS author_name,
         (SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id) AS reaction_count
       FROM posts 
-      INNER JOIN users ON posts.author_id = users.id 
+      LEFT JOIN users ON posts.author_id = users.id 
       ORDER BY posts.created_at DESC
     `);
     res.json(result.rows);
   } catch (err) {
     console.error("FETCH ERROR:", err);
-    res.status(500).json({ message: 'Server Error' });
+    // This message helps you see if it's a DB issue in the browser console
+    res.status(500).json({ message: 'Database Error: Check if post_reactions table exists' });
   }
 });
 
@@ -50,7 +51,8 @@ router.get('/:id', async (req, res) => {
         users.name AS author_name,
         (SELECT COUNT(*) FROM post_reactions WHERE post_id = posts.id) AS reaction_count
       FROM posts 
-      INNER JOIN users ON posts.author_id = users.id 
+      -- CHANGE 'INNER' TO 'LEFT' HERE --
+      LEFT JOIN users ON posts.author_id = users.id 
       WHERE posts.id = $1
     `, [req.params.id]);
 
@@ -64,7 +66,7 @@ router.get('/:id', async (req, res) => {
 
 // @route   POST /api/posts
 router.post('/', protect, upload.single('image'), async (req, res) => {
-  const { title, content } = req.body;
+  const { title, content } = req.body; // 'content' comes from your React form
   const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
 
   try {
@@ -74,17 +76,23 @@ router.post('/', protect, upload.single('image'), async (req, res) => {
     }
 
     const result = await pool.query(
+      // We map 'content' to 'body' here to match your SQL table
       'INSERT INTO posts (title, body, image, author_id) VALUES ($1, $2, $3, $4) RETURNING *',
       [title, content, imagePath, req.user.id]
     );
 
     const newPost = result.rows[0];
-    newPost.author_name = req.user.name; 
+    // We add the author_name manually so the frontend can display it immediately 
+    // without needing a refresh
+    newPost.author_name = req.user.name || 'Unknown User'; 
+    
     res.status(201).json(newPost);
   } catch (err) {
-    if (req.file) fs.unlinkSync(req.file.path); 
+    if (req.file) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    }
     console.error("DATABASE INSERT ERROR:", err);
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: 'Server Error: Check if table schema matches' });
   }
 });
 
