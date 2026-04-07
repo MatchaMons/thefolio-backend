@@ -4,6 +4,7 @@ const path = require('path');
 require('dotenv').config();
 const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
+const commentRoutes = require('./routes/comment.routes');
 
 const app = express();
 
