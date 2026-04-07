@@ -1,0 +1,26 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
+const authRoutes = require('./routes/auth.routes');
+
+const app = express();
+
+// 🟢 ALLOW CROSS-ORIGIN REQUESTS
+app.use(cors({
+    origin: 'http://localhost:3000', // Your React App URL
+    credentials: true
+}));
+
+app.use(express.json());
+
+// Static folder for uploaded avatars
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Routes
+app.use('/api/auth', authRoutes);
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`🚀 MISSION CONTROL ACTIVE ON PORT ${PORT}`);
+});
