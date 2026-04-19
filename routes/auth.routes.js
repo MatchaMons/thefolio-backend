@@ -62,7 +62,8 @@ router.post('/login', async (req, res) => {
             name: user.name,
             email: user.email,
             bio: user.bio,
-            profilePic: user.profile_pic 
+            profilePic: user.profile_pic,
+            role: user.role // 🟢 ADD THIS
         });
     } catch (err) {
         res.status(500).json({ message: 'SYSTEM ERROR' });
