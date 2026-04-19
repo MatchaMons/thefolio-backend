@@ -36,6 +36,17 @@ const protect = async (req, res, next) => {
         console.error("❌ SESSION EXPIRED:", err.message);
         return res.status(401).json({ message: 'SESSION EXPIRED: LOGIN AGAIN' });
     }
+
+    const adminOnly = (req, res, next) => {
+    // We already have req.user from the 'protect' middleware
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        res.status(403).json({ message: 'ACCESS DENIED: ADMIN PRIVILEGES REQUIRED' });
+    }
+};
+
+module.exports = { protect, adminOnly };
 };
 
 module.exports = { protect };
