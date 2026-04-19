@@ -123,4 +123,9 @@ router.put('/change-password', protect, async (req, res) => {
     }
 });
 
+// GET /api/auth/me
+router.get('/me', protect, (req, res) => {
+    res.json(req.user); // req.user is populated by your 'protect' middleware
+});
+
 module.exports = router;
